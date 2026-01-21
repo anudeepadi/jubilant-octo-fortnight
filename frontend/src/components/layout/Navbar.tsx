@@ -19,6 +19,7 @@ import {
   Plus,
   LogOut,
   LogIn,
+  Cloud,
 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { SearchBar } from '@/components/SearchBar';
@@ -41,7 +42,10 @@ import { OAuthDialog } from '@/components/dialogs/global/OAuthDialog';
 import { useUserSystem } from '@/components/ConfigProvider';
 import { oauthApi } from '@/lib/api';
 
-const INTERNAL_NAV = [{ label: 'Projects', icon: FolderOpen, to: '/projects' }];
+const INTERNAL_NAV = [
+  { label: 'Projects', icon: FolderOpen, to: '/projects' },
+  { label: 'External Tasks', icon: Cloud, to: '/external-tasks' },
+];
 
 const EXTERNAL_LINKS = [
   {
