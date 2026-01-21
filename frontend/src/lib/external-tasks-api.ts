@@ -128,6 +128,52 @@ export const externalTasksApi = {
   },
 
   /**
+   * Queue a task for automation processing
+   */
+  queueAutomation: async (id: string): Promise<ExternalTask> => {
+    if (!isSupabaseConfigured()) {
+      throw new Error('Supabase not configured');
+    }
+
+    // First get the current task to access its automation_log
+    const { data: currentTask, error: fetchError } = await supabase
+      .from('tasks')
+      .select('automation_log')
+      .eq('id', id)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching task for automation:', fetchError);
+      throw fetchError;
+    }
+
+    const currentLog = currentTask?.automation_log || [];
+    const newLogEntry = {
+      timestamp: new Date().toISOString(),
+      type: 'started' as const,
+      message: 'Task queued for automation',
+    };
+
+    const { data, error } = await supabase
+      .from('tasks')
+      .update({
+        automation_status: 'queued',
+        automation_log: [...currentLog, newLogEntry],
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error queueing task for automation:', error);
+      throw error;
+    }
+
+    return data;
+  },
+
+  /**
    * Subscribe to real-time changes on tasks table
    */
   subscribe: (

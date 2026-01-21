@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
-import type { ExternalTask } from '@/lib/supabase';
+import type { ExternalTask, AutomationTag } from '@/lib/supabase';
 
 interface TaskFormData {
   title: string;
@@ -28,6 +28,9 @@ interface TaskFormData {
   category: string;
   due_date: string;
   context: string;
+  automation_tag: AutomationTag;
+  project_tag: string;
+  repo_path: string;
 }
 
 interface ExternalTaskFormDialogProps {
@@ -55,6 +58,9 @@ export function ExternalTaskFormDialog({
     category: '',
     due_date: '',
     context: '',
+    automation_tag: 'none',
+    project_tag: '',
+    repo_path: '',
   });
 
   useEffect(() => {
@@ -68,6 +74,9 @@ export function ExternalTaskFormDialog({
           category: task.category || '',
           due_date: task.due_date ? task.due_date.split('T')[0] : '',
           context: task.context || '',
+          automation_tag: task.automation_tag || 'none',
+          project_tag: task.project_tag || '',
+          repo_path: task.repo_path || '',
         });
       } else {
         setFormData({
@@ -78,6 +87,9 @@ export function ExternalTaskFormDialog({
           category: '',
           due_date: '',
           context: '',
+          automation_tag: 'none',
+          project_tag: '',
+          repo_path: '',
         });
       }
     }
@@ -97,6 +109,9 @@ export function ExternalTaskFormDialog({
         category: formData.category.trim() || null,
         due_date: formData.due_date || null,
         context: formData.context.trim() || null,
+        automation_tag: formData.automation_tag || 'none',
+        project_tag: formData.project_tag.trim() || null,
+        repo_path: formData.repo_path.trim() || null,
       });
       onOpenChange(false);
     } catch (error) {
@@ -240,6 +255,60 @@ export function ExternalTaskFormDialog({
                 placeholder="Additional context or notes"
                 rows={2}
               />
+            </div>
+
+            {/* Automation Section */}
+            <div className="border-t pt-4 mt-2">
+              <h4 className="text-sm font-medium mb-3">Automation Settings</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Automation Type</Label>
+                  <Select
+                    value={formData.automation_tag}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, automation_tag: value as AutomationTag })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="research">Research</SelectItem>
+                      <SelectItem value="project">Project</SelectItem>
+                      <SelectItem value="refactor">Refactor</SelectItem>
+                      <SelectItem value="infra">Infrastructure</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="project_tag">Project Tag</Label>
+                  <Input
+                    id="project_tag"
+                    value={formData.project_tag}
+                    onChange={(e) =>
+                      setFormData({ ...formData, project_tag: e.target.value })
+                    }
+                    placeholder="e.g., vibe-kanban"
+                    disabled={formData.automation_tag === 'none' || formData.automation_tag === 'research'}
+                  />
+                </div>
+              </div>
+
+              {(formData.automation_tag === 'project' || formData.automation_tag === 'refactor' || formData.automation_tag === 'infra') && (
+                <div className="grid gap-2 mt-4">
+                  <Label htmlFor="repo_path">Repository Path</Label>
+                  <Input
+                    id="repo_path"
+                    value={formData.repo_path}
+                    onChange={(e) =>
+                      setFormData({ ...formData, repo_path: e.target.value })
+                    }
+                    placeholder="e.g., /home/user/projects/my-project"
+                  />
+                </div>
+              )}
             </div>
           </div>
 

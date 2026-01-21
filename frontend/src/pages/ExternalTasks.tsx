@@ -57,7 +57,7 @@ const statusColors: Record<TaskStatus, string> = {
 function ExternalTasksContent() {
   const { tasks, isLoading, isError, error, refetch, isConfigured } =
     useExternalTasks();
-  const { updateStatus, create, update, delete: deleteTask } =
+  const { updateStatus, create, update, delete: deleteTask, queueAutomation } =
     useExternalTaskMutations();
 
   const [viewMode, setViewMode] = useState<ViewMode>('kanban');
@@ -239,6 +239,17 @@ function ExternalTasksContent() {
   const handleCloseDetail = useCallback(() => {
     setSelectedTask(null);
   }, []);
+
+  const handleQueueAutomation = useCallback(
+    async (taskId: string) => {
+      try {
+        await queueAutomation(taskId);
+      } catch (err) {
+        console.error('Failed to queue automation:', err);
+      }
+    },
+    [queueAutomation]
+  );
 
   // Dashboard filter handlers
   const handleDashboardStatusFilter = useCallback((status: string) => {
@@ -502,6 +513,7 @@ function ExternalTasksContent() {
             onClose={handleCloseDetail}
             onEdit={handleEditTask}
             onDelete={handleDeleteTask}
+            onQueueAutomation={handleQueueAutomation}
           />
         </div>
       )}

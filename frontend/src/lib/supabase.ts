@@ -12,6 +12,17 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+// Automation types
+export type AutomationTag = 'none' | 'research' | 'project' | 'refactor' | 'infra';
+export type AutomationStatus = 'idle' | 'queued' | 'running' | 'done' | 'failed';
+
+export interface AutomationLogEntry {
+  timestamp: string;
+  type: 'started' | 'progress' | 'completed' | 'error';
+  message?: string;
+  output?: string;
+}
+
 // External task type matching user's Supabase schema
 export interface ExternalTask {
   id: string;
@@ -32,6 +43,13 @@ export interface ExternalTask {
   synced_at?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
+  // Automation fields
+  automation_tag?: AutomationTag | null;
+  automation_status?: AutomationStatus | null;
+  automation_log?: AutomationLogEntry[] | null;
+  project_tag?: string | null;
+  repo_path?: string | null;
+  pr_link?: string | null;
 }
 
 // Map external status to Vibe Kanban status

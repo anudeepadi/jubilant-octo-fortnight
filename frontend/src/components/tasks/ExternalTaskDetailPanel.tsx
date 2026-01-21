@@ -20,6 +20,12 @@ import {
   Edit,
   Trash2,
   ExternalLink,
+  Bot,
+  GitBranch,
+  Play,
+  AlertCircle,
+  CheckCircle2,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ExternalTaskDisplay } from '@/hooks/useExternalTasks';
@@ -29,6 +35,7 @@ interface ExternalTaskDetailPanelProps {
   onClose: () => void;
   onEdit: (task: ExternalTaskDisplay) => void;
   onDelete: (taskId: string) => Promise<void>;
+  onQueueAutomation?: (taskId: string) => Promise<void>;
 }
 
 const priorityConfig: Record<string, { color: string; bg: string; label: string }> = {
@@ -55,17 +62,55 @@ const statusConfig: Record<string, { label: string; color: string }> = {
   done: { label: 'Done', color: 'bg-green-500' },
 };
 
+const automationStatusConfig: Record<string, { label: string; color: string; icon: typeof Bot }> = {
+  idle: { label: 'Idle', color: 'bg-slate-400', icon: Bot },
+  queued: { label: 'Queued', color: 'bg-yellow-500', icon: Clock },
+  running: { label: 'Running', color: 'bg-blue-500', icon: Loader2 },
+  done: { label: 'Completed', color: 'bg-green-500', icon: CheckCircle2 },
+  failed: { label: 'Failed', color: 'bg-red-500', icon: AlertCircle },
+};
+
+const automationTagConfig: Record<string, { label: string; color: string }> = {
+  none: { label: 'None', color: 'bg-slate-200 text-slate-700' },
+  research: { label: 'Research', color: 'bg-purple-100 text-purple-700' },
+  project: { label: 'Project', color: 'bg-blue-100 text-blue-700' },
+  refactor: { label: 'Refactor', color: 'bg-orange-100 text-orange-700' },
+  infra: { label: 'Infrastructure', color: 'bg-emerald-100 text-emerald-700' },
+};
+
 export function ExternalTaskDetailPanel({
   task,
   onClose,
   onEdit,
   onDelete,
+  onQueueAutomation,
 }: ExternalTaskDetailPanelProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isQueueing, setIsQueueing] = useState(false);
 
   const priority = priorityConfig[task.priority] || priorityConfig.medium;
   const status = statusConfig[task.status] || statusConfig.todo;
+  const automationStatus = automationStatusConfig[task.automation_status] || automationStatusConfig.idle;
+  const automationTag = automationTagConfig[task.automation_tag] || automationTagConfig.none;
+  const AutomationIcon = automationStatus.icon;
+
+  const handleQueueAutomation = async () => {
+    if (!onQueueAutomation) return;
+    setIsQueueing(true);
+    try {
+      const originalId = task.id.replace('external-', '');
+      await onQueueAutomation(originalId);
+    } catch (error) {
+      console.error('Failed to queue automation:', error);
+    } finally {
+      setIsQueueing(false);
+    }
+  };
+
+  const canQueueAutomation =
+    task.automation_tag !== 'none' &&
+    (task.automation_status === 'idle' || task.automation_status === 'failed');
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('en-US', {
@@ -272,6 +317,117 @@ export function ExternalTaskDetailPanel({
                 Estimated Time
               </h3>
               <p className="text-sm">{task._external.estimated_time} minutes</p>
+            </div>
+          )}
+
+          {/* Automation Section */}
+          {task.automation_tag !== 'none' && (
+            <div className="border-t pt-4">
+              <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
+                <Bot className="h-4 w-4" />
+                Automation
+              </h3>
+
+              <div className="space-y-3">
+                {/* Automation Tag and Status */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge className={automationTag.color}>
+                    {automationTag.label}
+                  </Badge>
+                  <Badge className={cn('text-white', automationStatus.color)}>
+                    <AutomationIcon className={cn('h-3 w-3 mr-1', task.automation_status === 'running' && 'animate-spin')} />
+                    {automationStatus.label}
+                  </Badge>
+                </div>
+
+                {/* Project Tag */}
+                {task.project_tag && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <GitBranch className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">Project:</span>
+                    <span className="font-medium">{task.project_tag}</span>
+                  </div>
+                )}
+
+                {/* Repo Path */}
+                {task.repo_path && (
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Path:</span>{' '}
+                    <code className="text-xs bg-muted px-1 py-0.5 rounded">
+                      {task.repo_path}
+                    </code>
+                  </div>
+                )}
+
+                {/* PR Link */}
+                {task.pr_link && (
+                  <div className="text-sm">
+                    <a
+                      href={task.pr_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-500 hover:underline flex items-center gap-1"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      View Pull Request
+                    </a>
+                  </div>
+                )}
+
+                {/* Queue Button */}
+                {canQueueAutomation && onQueueAutomation && (
+                  <Button
+                    size="sm"
+                    onClick={handleQueueAutomation}
+                    disabled={isQueueing}
+                    className="mt-2"
+                  >
+                    {isQueueing ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Play className="h-4 w-4 mr-2" />
+                    )}
+                    {task.automation_status === 'failed' ? 'Retry Automation' : 'Run Automation'}
+                  </Button>
+                )}
+
+                {/* Automation Log */}
+                {task.automation_log && task.automation_log.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-1">
+                      <History className="h-4 w-4" />
+                      Automation Log
+                    </h4>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {task.automation_log.map((entry, index) => (
+                        <div
+                          key={index}
+                          className={cn(
+                            'text-xs p-2 rounded border-l-2',
+                            entry.type === 'error' && 'bg-red-50 border-red-400 dark:bg-red-900/20',
+                            entry.type === 'completed' && 'bg-green-50 border-green-400 dark:bg-green-900/20',
+                            entry.type === 'progress' && 'bg-blue-50 border-blue-400 dark:bg-blue-900/20',
+                            entry.type === 'started' && 'bg-slate-50 border-slate-400 dark:bg-slate-900/20'
+                          )}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-medium capitalize">{entry.type}</span>
+                            <span className="text-muted-foreground">
+                              {new Date(entry.timestamp).toLocaleString()}
+                            </span>
+                          </div>
+                          {entry.message && <p>{entry.message}</p>}
+                          {entry.output && (
+                            <pre className="mt-1 text-xs bg-muted p-2 rounded overflow-x-auto whitespace-pre-wrap">
+                              {entry.output}
+                            </pre>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

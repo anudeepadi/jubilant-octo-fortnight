@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { externalTasksApi } from '@/lib/external-tasks-api';
-import { ExternalTask, mapExternalStatus, isSupabaseConfigured } from '@/lib/supabase';
+import { ExternalTask, mapExternalStatus, isSupabaseConfigured, AutomationTag, AutomationStatus, AutomationLogEntry } from '@/lib/supabase';
 import type { TaskStatus } from 'shared/types';
 
 // Convert external task to Vibe Kanban task-like structure
@@ -17,6 +17,13 @@ export interface ExternalTaskDisplay {
   updated_at: string;
   context: string | null;
   next_actions: string[] | null;
+  // Automation fields
+  automation_tag: AutomationTag;
+  automation_status: AutomationStatus;
+  automation_log: AutomationLogEntry[];
+  project_tag: string | null;
+  repo_path: string | null;
+  pr_link: string | null;
   // Mark as external for UI differentiation
   isExternal: true;
   // Original external data
@@ -44,6 +51,13 @@ function convertToDisplayTask(task: ExternalTask): ExternalTaskDisplay {
     updated_at: task.updated_at || new Date().toISOString(),
     context: task.context || null,
     next_actions: task.next_actions || null,
+    // Automation fields
+    automation_tag: task.automation_tag || 'none',
+    automation_status: task.automation_status || 'idle',
+    automation_log: task.automation_log || [],
+    project_tag: task.project_tag || null,
+    repo_path: task.repo_path || null,
+    pr_link: task.pr_link || null,
     isExternal: true,
     _external: task,
   };
@@ -133,13 +147,22 @@ export function useExternalTaskMutations() {
     },
   });
 
+  const queueAutomationMutation = useMutation({
+    mutationFn: (id: string) => externalTasksApi.queueAutomation(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['external-tasks'] });
+    },
+  });
+
   return {
     create: createMutation.mutateAsync,
     update: updateMutation.mutateAsync,
     updateStatus: updateStatusMutation.mutateAsync,
     delete: deleteMutation.mutateAsync,
+    queueAutomation: queueAutomationMutation.mutateAsync,
     isCreating: createMutation.isPending,
     isUpdating: updateMutation.isPending || updateStatusMutation.isPending,
     isDeleting: deleteMutation.isPending,
+    isQueueing: queueAutomationMutation.isPending,
   };
 }
