@@ -1,0 +1,10 @@
+{
+  "postCommit": {
+    "command": "node /home/onebeast/Documents/Projects/vibe/claude-task-bridge/hooks/post-commit.js",
+    "env": {
+      "SUPABASE_URL": "${SUPABASE_URL}",
+      "SUPABASE_SERVICE_KEY": "${SUPABASE_SERVICE_KEY}",
+      "TASK_ID": "${TASK_ID}"
+    }
+  }
+}
